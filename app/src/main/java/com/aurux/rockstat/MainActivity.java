@@ -10,6 +10,8 @@ import androidx.navigation.Navigation;
 import androidx.navigation.ui.AppBarConfiguration;
 import androidx.navigation.ui.NavigationUI;
 
+import com.google.android.libraries.places.api.Places;
+
 import com.aurux.rockstat.databinding.ActivityMainBinding;
 
 public class MainActivity extends AppCompatActivity {
