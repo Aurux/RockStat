@@ -36,7 +36,7 @@ public class MainActivity extends AppCompatActivity {
         NavigationUI.setupWithNavController(binding.navView, navController);
 
         if (!Places.isInitialized()) {
-            Places.initialize(getApplicationContext(), "@string/maps_api_key");
+            Places.initialize(getApplicationContext(), getString(R.string.maps_api_key));
         }
     }
 
