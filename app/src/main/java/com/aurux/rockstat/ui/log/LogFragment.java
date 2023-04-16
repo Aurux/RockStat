@@ -1,6 +1,8 @@
 package com.aurux.rockstat.ui.log;
 
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -39,6 +41,7 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.aurux.rockstat.R;
+import com.google.android.gms.maps.model.PointOfInterest;
 import com.google.android.libraries.places.api.Places;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -49,6 +52,7 @@ import android.widget.AdapterView;
 
 import com.google.android.libraries.places.api.model.Place;
 import com.google.android.libraries.places.api.model.RectangularBounds;
+import com.google.android.libraries.places.api.model.TypeFilter;
 import com.google.android.libraries.places.api.net.FindAutocompletePredictionsRequest;
 import com.google.android.libraries.places.api.net.PlacesClient;
 import com.google.android.libraries.places.api.model.AutocompleteSessionToken;
@@ -86,6 +90,9 @@ public class LogFragment extends Fragment implements OnMapReadyCallback {
     private static final String SEARCH_KEYWORD = "climb";
 
     private AppDatabase climbLogDatabase;
+
+    private Handler debounceHandler = new Handler(Looper.getMainLooper());
+    private Runnable searchPlacesRunnable;
 
 
 
@@ -291,7 +298,8 @@ public class LogFragment extends Fragment implements OnMapReadyCallback {
         fusedLocationClient.getLastLocation().addOnSuccessListener(requireActivity(), location -> {
             if (location != null) {
                 LatLng currentLocation = new LatLng(location.getLatitude(), location.getLongitude());
-                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 15));
+                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 17));
+                searchNearbyClimbingPlaces(currentLocation, placesClient, selectedPlaceTextView); // Add this line
             }
         });
         locationCallback = new LocationCallback() {
@@ -314,31 +322,25 @@ public class LogFragment extends Fragment implements OnMapReadyCallback {
 
         fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null);
 
+        mMap.setOnPoiClickListener(new GoogleMap.OnPoiClickListener() {
+            @Override
+            public void onPoiClick(PointOfInterest poi) {
+                mMap.clear(); // Clear any existing markers
+                mMap.addMarker(new MarkerOptions().position(poi.latLng).title(poi.name));
+                selectedPlaceTextView.setText(poi.name);
+            }
+        });
+
         mMap.setOnMapClickListener(latLng -> {
             mMap.clear(); // Clear any existing markers
             mMap.addMarker(new MarkerOptions().position(latLng).title("Selected Location"));
-            // Search for nearby climbing places when the user places down a pin
-            searchNearbyClimbingPlaces(latLng, placesClient, selectedPlaceTextView);
+            selectedPlaceTextView.setText(latLng.latitude + ", " + latLng.longitude);
         });
 
 
-        getCurrentLocationAndSearchNearbyPlaces(fusedLocationClient, placesClient);
     }
 
-    private void getCurrentLocationAndSearchNearbyPlaces(FusedLocationProviderClient fusedLocationClient, PlacesClient placesClient) {
-        if (ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
-                && ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(requireActivity(), new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION}, 1);
-            return;
-        }
 
-        fusedLocationClient.getLastLocation().addOnSuccessListener(location -> {
-            if (location != null) {
-                LatLng currentLocation = new LatLng(location.getLatitude(), location.getLongitude());
-                searchNearbyClimbingPlaces(currentLocation, placesClient, selectedPlaceTextView);
-            }
-        });
-    }
 
     private void searchNearbyClimbingPlaces(LatLng currentLocation, PlacesClient placesClient, TextView selectedPlaceTextView) {
         double latitude = currentLocation.latitude;
@@ -361,6 +363,7 @@ public class LogFragment extends Fragment implements OnMapReadyCallback {
                 .setLocationRestriction(searchBounds)
                 .setSessionToken(token)
                 .setQuery(SEARCH_KEYWORD)
+                .setTypeFilter(TypeFilter.ESTABLISHMENT)
                 .build();
 
         // Send the request and handle the response
