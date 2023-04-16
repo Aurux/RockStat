@@ -9,14 +9,18 @@ import androidx.activity.result.contract.ActivityResultContracts;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.LiveData;
 import androidx.lifecycle.ViewModelProvider;
 
+import com.aurux.rockstat.data.database.AppDatabase;
+import com.aurux.rockstat.data.models.ClimbLogEntry;
 import com.aurux.rockstat.databinding.FragmentLogBinding;
-import androidx.databinding.DataBindingUtil;
 
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -43,8 +47,6 @@ import android.widget.Spinner;
 import android.widget.ArrayAdapter;
 import android.widget.AdapterView;
 
-import com.google.android.libraries.places.api.model.LocationBias;
-import com.google.android.libraries.places.api.model.LocationRestriction;
 import com.google.android.libraries.places.api.model.Place;
 import com.google.android.libraries.places.api.model.RectangularBounds;
 import com.google.android.libraries.places.api.net.FindAutocompletePredictionsRequest;
@@ -61,6 +63,9 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
+import android.util.Log;
+import com.aurux.rockstat.data.database.AppDatabase;
+import com.aurux.rockstat.data.dao.ClimbLogEntryDao;
 
 
 
@@ -79,6 +84,9 @@ public class LogFragment extends Fragment implements OnMapReadyCallback {
 
     private static final int SEARCH_RADIUS_METERS = 50;
     private static final String SEARCH_KEYWORD = "climb";
+
+    private AppDatabase climbLogDatabase;
+
 
 
     public View onCreateView(@NonNull LayoutInflater inflater,
@@ -146,6 +154,76 @@ public class LogFragment extends Fragment implements OnMapReadyCallback {
 
 
 
+        climbLogDatabase = AppDatabase.getInstance(getActivity());
+
+        Button btnSubmit = root.findViewById(R.id.btn_submit);
+        btnSubmit.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+
+
+                // Gather data from input fields and create a LogEntry object
+                ClimbLogEntry logEntry = new ClimbLogEntry();
+                logEntry.setClimbingType(((Spinner) binding.spinnerClimbingType).getSelectedItem().toString());
+                logEntry.setRouteName(((EditText) binding.etRouteName).getText().toString());
+                logEntry.setGrade(((Spinner) binding.spinnerGrade).getSelectedItem().toString());
+                logEntry.setTimestamp(System.currentTimeMillis());
+                String attemptsStr = binding.etAttempts.getText().toString();
+                if (attemptsStr.isEmpty()) {
+                    Toast.makeText(getActivity(), "Please enter the number of attempts", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                int attempts;
+
+                try {
+                    attempts = Integer.parseInt(attemptsStr);
+                } catch (NumberFormatException e) {
+                    attempts = 0;
+                }
+
+                logEntry.setAttempts(attempts);
+                logEntry.setCompleted(binding.cbCompleted.isChecked());
+                logEntry.setComment(((EditText) binding.etComment).getText().toString());
+                float ratingFloat = binding.ratingBar.getRating();
+                int rating = Math.round(ratingFloat);
+
+                logEntry.setRating(rating);
+                logEntry.setSelectedPlace(selectedPlaceTextView.getText().toString());
+
+                // Insert the logEntry object into the database
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        long rowId = climbLogDatabase.climbLogEntryDao().insert(logEntry);
+                        if (rowId == -1) {
+                            Log.d("Database", "Insertion failed");
+                        } else {
+                            Log.d("Database", "Insertion successful, row ID: " + rowId);
+
+                            // Clear input fields after successful submission
+                            requireActivity().runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    binding.spinnerClimbingType.setSelection(0);
+                                    binding.etRouteName.setText("");
+                                    binding.spinnerGrade.setSelection(0);
+                                    binding.etAttempts.setText("");
+                                    binding.cbCompleted.setChecked(false);
+                                    binding.etComment.setText("");
+                                    binding.ratingBar.setRating(0);
+                                }
+                            });
+                        }
+                    }
+                }).start();
+
+                // Show a message to inform the user that the data has been saved
+                Toast.makeText(getActivity(), "Log entry saved", Toast.LENGTH_SHORT).show();
+            }
+        });
+
         return root;
     }
 
@@ -210,7 +288,12 @@ public class LogFragment extends Fragment implements OnMapReadyCallback {
         locationRequest.setInterval(10000); // Update interval in milliseconds
         locationRequest.setFastestInterval(5000);
         locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-
+        fusedLocationClient.getLastLocation().addOnSuccessListener(requireActivity(), location -> {
+            if (location != null) {
+                LatLng currentLocation = new LatLng(location.getLatitude(), location.getLongitude());
+                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 15));
+            }
+        });
         locationCallback = new LocationCallback() {
 
             public void onLocationResult(LocationResult locationResult) {
@@ -220,10 +303,6 @@ public class LogFragment extends Fragment implements OnMapReadyCallback {
 
                 Location location = locationResult.getLastLocation();
                 LatLng currentLocation = new LatLng(location.getLatitude(), location.getLongitude());
-                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 15));
-
-                // Search for nearby climbing places when the location is updated
-                searchNearbyClimbingPlaces(currentLocation, placesClient, selectedPlaceTextView);
             }
         };
 
@@ -235,11 +314,29 @@ public class LogFragment extends Fragment implements OnMapReadyCallback {
 
         fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null);
 
-
         mMap.setOnMapClickListener(latLng -> {
             mMap.clear(); // Clear any existing markers
             mMap.addMarker(new MarkerOptions().position(latLng).title("Selected Location"));
-            // Save the selected location (if needed)
+            // Search for nearby climbing places when the user places down a pin
+            searchNearbyClimbingPlaces(latLng, placesClient, selectedPlaceTextView);
+        });
+
+
+        getCurrentLocationAndSearchNearbyPlaces(fusedLocationClient, placesClient);
+    }
+
+    private void getCurrentLocationAndSearchNearbyPlaces(FusedLocationProviderClient fusedLocationClient, PlacesClient placesClient) {
+        if (ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                && ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(requireActivity(), new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION}, 1);
+            return;
+        }
+
+        fusedLocationClient.getLastLocation().addOnSuccessListener(location -> {
+            if (location != null) {
+                LatLng currentLocation = new LatLng(location.getLatitude(), location.getLongitude());
+                searchNearbyClimbingPlaces(currentLocation, placesClient, selectedPlaceTextView);
+            }
         });
     }
 
@@ -282,13 +379,13 @@ public class LogFragment extends Fragment implements OnMapReadyCallback {
 
                             mMap.addMarker(new MarkerOptions().position(placeLatLng).title(place.getName()));
                             if (count.getAndIncrement() == 0) {
-                                selectedPlaceTextView.setText("Location: " + place.getName());
+                                selectedPlaceTextView.setText(place.getName());
                             }
                         }
                     });
                 }
             } else {
-                selectedPlaceTextView.setText("Location: " + currentLocation.latitude + ", " + currentLocation.longitude);
+                selectedPlaceTextView.setText(currentLocation.latitude + ", " + currentLocation.longitude);
                 Toast.makeText(requireContext(), "No nearby climbing places found", Toast.LENGTH_SHORT).show();
             }
         });
