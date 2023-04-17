@@ -381,7 +381,7 @@ public class LogFragment extends Fragment implements OnMapReadyCallback {
                     placesClient.fetchPlace(FetchPlaceRequest.newInstance(placeId, placeFields)).addOnSuccessListener((fetchPlaceResponse) -> {
                         Place place = fetchPlaceResponse.getPlace();
                         LatLng placeLatLng = place.getLatLng();
-                        if (placeLatLng != null) {
+                        if (placeLatLng != null && mMap != null) {
 
                             mMap.addMarker(new MarkerOptions().position(placeLatLng).title(place.getName()));
                             if (count.getAndIncrement() == 0) {

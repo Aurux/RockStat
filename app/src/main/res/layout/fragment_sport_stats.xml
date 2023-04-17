@@ -1,57 +1,94 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.core.widget.NestedScrollView
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    tools:context=".ui.stats.BoulderingStatsFragment">
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".ui.stats.SportStatsFragment">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        >
+        android:layout_height="wrap_content">
 
-        <TextView
-            android:id="@+id/CPW_text"
+        <include
+            android:id="@+id/stats_card_include"
+            layout="@layout/stats_card"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
+            android:layout_marginTop="16dp"
             app:layout_constraintTop_toTopOf="parent"
-            android:text="Climbs per week"
-            android:padding="5dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
 
-            />
-        <com.github.mikephil.charting.charts.BarChart
-            android:id="@+id/climbsPerWeekChart"
+        <androidx.cardview.widget.CardView
+            android:id="@+id/climbsPerWeekCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:minHeight="250dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="8dp"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="4dp"
+            app:layout_constraintTop_toBottomOf="@+id/stats_card_include"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
 
-            app:layout_constraintTop_toBottomOf="@+id/CPW_text"
-            app:layout_constraintBottom_toTopOf="@+id/grade_text"
-            app:layout_constraintVertical_weight="1"
-            android:padding="5dp"/>
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
 
-        <TextView
-            android:id="@+id/grade_text"
+                <TextView
+                    android:id="@+id/CPW_text"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="5dp"
+                    android:text="Climbs per week"
+                    android:textAlignment="center"
+                    app:layout_constraintTop_toTopOf="parent" />
+
+                <com.github.mikephil.charting.charts.BarChart
+                    android:id="@+id/climbsPerWeekChart"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="220dp"
+                    app:layout_constraintTop_toBottomOf="@+id/CPW_text" />
+            </androidx.constraintlayout.widget.ConstraintLayout>
+        </androidx.cardview.widget.CardView>
+
+        <androidx.cardview.widget.CardView
+            android:id="@+id/avgAttemptsPerGradeCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            app:layout_constraintTop_toBottomOf="@+id/climbsPerWeekChart"
-            android:text="Average attempts per grade"
-            android:padding="5dp"
+            app:cardCornerRadius="8dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="8dp"
+            app:cardElevation="4dp"
+            app:layout_constraintTop_toBottomOf="@+id/climbsPerWeekCard"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
 
-            />
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
 
-        <com.github.mikephil.charting.charts.BarChart
-            android:id="@+id/avgAttemptsPerGradeChart"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:minHeight="250dp"
+                <TextView
+                    android:id="@+id/grade_text"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="5dp"
+                    android:textAlignment="center"
+                    android:text="Average attempts per grade"
+                    app:layout_constraintTop_toTopOf="parent" />
 
-            app:layout_constraintTop_toBottomOf="@+id/grade_text"
-            app:layout_constraintVertical_weight="1" />
+                <com.github.mikephil.charting.charts.BarChart
+                    android:id="@+id/avgAttemptsPerGradeChart"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="220dp"
+                    app:layout_constraintTop_toBottomOf="@+id/grade_text" />
+            </androidx.constraintlayout.widget.ConstraintLayout>
+        </androidx.cardview.widget.CardView>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </androidx.core.widget.NestedScrollView>
+

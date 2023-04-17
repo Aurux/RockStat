@@ -253,5 +253,44 @@ public class ChartUtils {
 
         chart.invalidate();
     }
+
+    public static String getHighestGrade(List<ClimbLogEntry> climbs, String climbType) {
+        int highestIndex = 0;
+        String[] vGrades = {"VB", "V0", "V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8", "V9", "V10", "V11", "V12", "V13", "V14", "V15", "V16", "V17"};
+        String[] fGrades = {"1", "2", "3", "4a", "4b", "4c", "5a", "5b", "5c", "6a", "6b", "6c", "7a", "7b", "7c", "8a", "8b", "8c", "9a", "9b", "9c"};
+        String[] tradGrades = {"Mod", "Diff", "VDiff", "HVD", "Sev", "HS", "VS", "HVS", "E1", "E2", "E3", "E4", "E5", "E6", "E7", "E8", "E9", "E10", "E11"};
+        String[] gradeList;
+
+        if (climbs == null || climbs.isEmpty()) {
+            return "-";
+        }
+
+        switch (climbType) {
+            case "Bouldering":
+                gradeList = vGrades;
+                break;
+            case "Sport":
+                gradeList = fGrades;
+                break;
+            case "Trad":
+                gradeList = tradGrades;
+                break;
+            default:
+                gradeList = null;
+        }
+
+
+
+        for (ClimbLogEntry climb : climbs) {
+            String grade = climb.getGrade();
+            for (int i = 0; i < gradeList.length; i++){
+                if (gradeList[i].equals(grade) && i > highestIndex) {
+                    highestIndex = i;
+                }
+            }
+        }
+
+        return gradeList[highestIndex];
+    }
 }
 

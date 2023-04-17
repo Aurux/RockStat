@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
@@ -11,6 +12,7 @@ import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModel;
 import androidx.lifecycle.ViewModelProvider;
 
+import com.aurux.rockstat.R;
 import com.aurux.rockstat.data.dao.ClimbLogEntryDao;
 import com.aurux.rockstat.data.database.AppDatabase;
 import com.aurux.rockstat.data.models.ClimbLogEntry;
@@ -24,6 +26,9 @@ public class SportStatsFragment extends Fragment {
     private StatsViewModel statsViewModel;
 
     private FragmentSportStatsBinding binding;
+
+    private TextView highestGrade;
+    private TextView totalClimbs;
     public SportStatsFragment() {
         // Required empty public constructor
     }
@@ -44,9 +49,14 @@ public class SportStatsFragment extends Fragment {
         binding = FragmentSportStatsBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
 
+        highestGrade = root.findViewById(R.id.highest_grade_circle);
+        totalClimbs = root.findViewById(R.id.total_climbs_circle);
+
         statsViewModel.getSportClimbs().observe(getViewLifecycleOwner(), new Observer<List<ClimbLogEntry>>() {
             @Override
             public void onChanged(List<ClimbLogEntry> climbs) {
+                totalClimbs.setText(String.valueOf(climbs.size()));
+                highestGrade.setText(ChartUtils.getHighestGrade(climbs, "Sport"));
                 ChartUtils.updateClimbsDonePerWeekChart(requireContext(), binding.climbsPerWeekChart, climbs);
                 ChartUtils.updateAvgAttemptsPerGradeChart(requireContext(), binding.avgAttemptsPerGradeChart, climbs, "Sport");
             }
