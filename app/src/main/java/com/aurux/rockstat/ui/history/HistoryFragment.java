@@ -72,7 +72,7 @@ public class HistoryFragment extends Fragment {
 
             @Override
             public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
-                int position = viewHolder.getAdapterPosition();
+                int position = viewHolder.getBindingAdapterPosition();
                 ClimbLogEntry logEntryToDelete = adapter.getClimbLogEntry(position);
 
                 // Show a confirmation dialog

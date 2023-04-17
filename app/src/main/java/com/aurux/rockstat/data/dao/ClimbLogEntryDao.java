@@ -19,4 +19,13 @@ public interface ClimbLogEntryDao {
 
     @Delete
     void delete(ClimbLogEntry climbLogEntry);
+
+    @Query("SELECT * FROM climb_log_entries WHERE climbing_type = 'Bouldering'")
+    LiveData<List<ClimbLogEntry>> getBoulderingClimbs();
+
+    @Query("SELECT * FROM climb_log_entries WHERE climbing_type = 'Sport'")
+    LiveData<List<ClimbLogEntry>> getSportClimbs();
+
+    @Query("SELECT * FROM climb_log_entries WHERE climbing_type = 'Trad'")
+    LiveData<List<ClimbLogEntry>> getTradClimbs();
 }

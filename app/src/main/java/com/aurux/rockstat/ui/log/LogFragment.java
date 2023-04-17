@@ -213,9 +213,7 @@ public class LogFragment extends Fragment implements OnMapReadyCallback {
                             requireActivity().runOnUiThread(new Runnable() {
                                 @Override
                                 public void run() {
-                                    binding.spinnerClimbingType.setSelection(0);
                                     binding.etRouteName.setText("");
-                                    binding.spinnerGrade.setSelection(0);
                                     binding.etAttempts.setText("");
                                     binding.cbCompleted.setChecked(false);
                                     binding.etComment.setText("");
