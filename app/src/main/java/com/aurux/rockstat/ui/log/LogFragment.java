@@ -126,7 +126,7 @@ public class LogFragment extends Fragment implements OnMapReadyCallback {
         typeSpinner.setAdapter(typeAdapter);
 
 
-
+        EditText nameOfRouteEditText = root.findViewById(R.id.et_route_name);
         // Set up a listener for the type spinner
         typeSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
 
@@ -139,14 +139,19 @@ public class LogFragment extends Fragment implements OnMapReadyCallback {
                     ArrayAdapter<String> gradeAdapter = new ArrayAdapter<>(getContext(), android.R.layout.simple_spinner_item, vGrades);
                     gradeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
                     gradeSpinner.setAdapter(gradeAdapter);
+
+                    // Hide the name of route text field
+                    nameOfRouteEditText.setVisibility(View.GONE);
                 } else if (selectedType.equals("Sport")) {
                     ArrayAdapter<String> gradeAdapter = new ArrayAdapter<>(getContext(), android.R.layout.simple_spinner_item, fGrades);
                     gradeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
                     gradeSpinner.setAdapter(gradeAdapter);
+                    nameOfRouteEditText.setVisibility(View.VISIBLE);
                 } else if (selectedType.equals("Trad")) {
                     ArrayAdapter<String> gradeAdapter = new ArrayAdapter<>(getContext(), android.R.layout.simple_spinner_item, tradGrades);
                     gradeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
                     gradeSpinner.setAdapter(gradeAdapter);
+                    nameOfRouteEditText.setVisibility(View.VISIBLE);
                 }
             }
 
@@ -392,12 +397,48 @@ public class LogFragment extends Fragment implements OnMapReadyCallback {
         });
     }
 
+    @Override
+    public void onPause() {
+        super.onPause();
+        if (mMap != null) {
+            if (locationCallback != null) {
+                FusedLocationProviderClient fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity());
+                fusedLocationClient.removeLocationUpdates(locationCallback);
+            }
+        }
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (mMap != null) {
+            if (locationCallback != null) {
+                FusedLocationProviderClient fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity());
+                LocationRequest locationRequest = LocationRequest.create();
+                locationRequest.setInterval(10000); // Update interval in milliseconds
+                locationRequest.setFastestInterval(5000);
+                locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+                try {
+                    fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null);
+                } catch (SecurityException e) {
+
+                    Toast.makeText(requireContext(), "Location permission is required for this feature.", Toast.LENGTH_SHORT).show();
+                }
+            }
+        }
+    }
 
 
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        binding = null;
+        if (mMap != null) {
+            mMap.clear();
+            mMap = null;
+        }
+        if (binding != null) {
+            binding = null;
+        }
     }
 }

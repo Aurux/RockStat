@@ -90,6 +90,7 @@ public class ChartUtils {
         });
 
         chart.setData(data);
+        chart.setTouchEnabled(false);
         chart.getDescription().setEnabled(false);
         chart.getLegend().setEnabled(false);
 
@@ -220,6 +221,7 @@ public class ChartUtils {
             }
         });
         chart.setData(data);
+        chart.setTouchEnabled(false);
         chart.getDescription().setEnabled(false);
         chart.getLegend().setEnabled(false);
 
