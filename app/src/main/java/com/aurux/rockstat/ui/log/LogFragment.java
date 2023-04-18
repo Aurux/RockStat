@@ -1,5 +1,6 @@
 package com.aurux.rockstat.ui.log;
 
+import android.content.res.Configuration;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -38,7 +39,10 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.MapStyleOptions;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.aurux.rockstat.R;
 import com.google.android.gms.maps.model.PointOfInterest;
@@ -63,6 +67,7 @@ import com.google.android.libraries.places.api.net.FetchPlaceRequest;
 
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -91,9 +96,7 @@ public class LogFragment extends Fragment implements OnMapReadyCallback {
 
     private AppDatabase climbLogDatabase;
 
-    private Handler debounceHandler = new Handler(Looper.getMainLooper());
-    private Runnable searchPlacesRunnable;
-
+    private Marker currentMarker;
 
 
     public View onCreateView(@NonNull LayoutInflater inflater,
@@ -273,6 +276,15 @@ public class LogFragment extends Fragment implements OnMapReadyCallback {
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
 
+        int checkNightMode = getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
+
+        if (checkNightMode == Configuration.UI_MODE_NIGHT_YES) {
+                googleMap.setMapStyle(MapStyleOptions.loadRawResourceStyle(requireContext(), R.raw.dark_map));
+        }
+        else {
+            googleMap.setMapStyle(MapStyleOptions.loadRawResourceStyle(requireContext(), R.raw.light_map));
+        }
+
         if (ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
                 && ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             requestPermissionsLauncher.launch(new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION});
@@ -302,7 +314,7 @@ public class LogFragment extends Fragment implements OnMapReadyCallback {
             if (location != null) {
                 LatLng currentLocation = new LatLng(location.getLatitude(), location.getLongitude());
                 mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 17));
-                searchNearbyClimbingPlaces(currentLocation, placesClient, selectedPlaceTextView); // Add this line
+                //searchNearbyClimbingPlaces(currentLocation, placesClient, selectedPlaceTextView);
             }
         });
         locationCallback = new LocationCallback() {
@@ -325,20 +337,31 @@ public class LogFragment extends Fragment implements OnMapReadyCallback {
 
         fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null);
 
+
+
         mMap.setOnPoiClickListener(new GoogleMap.OnPoiClickListener() {
             @Override
             public void onPoiClick(PointOfInterest poi) {
-                mMap.clear(); // Clear any existing markers
-                mMap.addMarker(new MarkerOptions().position(poi.latLng).title(poi.name));
+                if (currentMarker != null) {
+                    currentMarker.remove();
+                }
+
+                currentMarker = mMap.addMarker(new MarkerOptions().position(poi.latLng).title(poi.name).icon(BitmapDescriptorFactory.defaultMarker(201)));
                 selectedPlaceTextView.setText(poi.name);
             }
         });
 
+
+
         mMap.setOnMapClickListener(latLng -> {
-            mMap.clear(); // Clear any existing markers
-            mMap.addMarker(new MarkerOptions().position(latLng).title("Selected Location"));
+            if (currentMarker != null) {
+                currentMarker.remove();
+            }
+            currentMarker = mMap.addMarker(new MarkerOptions().position(latLng).title("Selected Location").icon(BitmapDescriptorFactory.defaultMarker(201)));
             selectedPlaceTextView.setText(latLng.latitude + ", " + latLng.longitude);
         });
+
+
 
 
     }
@@ -373,7 +396,13 @@ public class LogFragment extends Fragment implements OnMapReadyCallback {
         placesClient.findAutocompletePredictions(request).addOnSuccessListener((response) -> {
             if (!response.getAutocompletePredictions().isEmpty()) {
                 AtomicInteger count = new AtomicInteger();
+                int maxResults = 3; // Only fetch details for top 3 results
+
                 for (AutocompletePrediction prediction : response.getAutocompletePredictions()) {
+                    if (count.get() >= maxResults) {
+                        break;
+                    }
+
                     String placeId = prediction.getPlaceId();
 
                     // Fetch the details of the place using its place ID
@@ -382,7 +411,6 @@ public class LogFragment extends Fragment implements OnMapReadyCallback {
                         Place place = fetchPlaceResponse.getPlace();
                         LatLng placeLatLng = place.getLatLng();
                         if (placeLatLng != null && mMap != null) {
-
                             mMap.addMarker(new MarkerOptions().position(placeLatLng).title(place.getName()));
                             if (count.getAndIncrement() == 0) {
                                 selectedPlaceTextView.setText(place.getName());
@@ -395,6 +423,7 @@ public class LogFragment extends Fragment implements OnMapReadyCallback {
                 Toast.makeText(requireContext(), "No nearby climbing places found", Toast.LENGTH_SHORT).show();
             }
         });
+
     }
 
     @Override
